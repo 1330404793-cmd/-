@@ -277,6 +277,18 @@ button:disabled {
   grid-template-rows: 72px 1fr;
 }
 
+.role-user {
+  grid-template-columns: 1fr;
+}
+
+.role-user .sidebar {
+  display: none;
+}
+
+.role-user .workspace {
+  max-width: 1180px;
+}
+
 .topbar {
   grid-column: 1 / -1;
   display: flex;

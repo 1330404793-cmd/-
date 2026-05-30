@@ -215,7 +215,7 @@
       { id: "info", label: "信息浏览", icon: icons.eye, roles: ["admin", "user"] },
       { id: "publish", label: "信息发布", icon: icons.file, roles: ["admin"] },
       { id: "users", label: "用户管理", icon: icons.users, roles: ["admin"] },
-      { id: "password", label: "修改密码", icon: icons.key, roles: ["admin", "user"] }
+      { id: "password", label: "修改密码", icon: icons.key, roles: ["admin"] }
     ].filter((item) => item.roles.includes(user.role));
 
     if (!navItems.some((item) => item.id === state.activeView)) {
@@ -223,7 +223,7 @@
     }
 
     app.innerHTML = `
-      <div class="shell">
+      <div class="shell role-${escapeHtml(user.role)}">
         <header class="topbar">
           <div class="brand">
             <span class="brand-mark">信</span>
@@ -291,22 +291,28 @@
   function renderInfoView(user) {
     const posts = filteredPosts();
     const selected = ensureSelectedPost(posts);
-    const totalUsers = state.users.length;
-    const activeUsers = state.users.filter((item) => item.status === "active").length;
+    const isAdmin = user.role === "admin";
+    const totalUsers = isAdmin ? state.users.length : 0;
+    const activeUsers = isAdmin ? state.users.filter((item) => item.status === "active").length : 0;
+    const adminOverview = isAdmin
+      ? `
+        <section class="section-title">
+          <div>
+            <h2>信息浏览</h2>
+            <p class="subtle">当前账号可浏览管理员发布的信息。</p>
+          </div>
+        </section>
+        <section class="stats-row" aria-label="数据概览">
+          <div class="stat"><span>已发布信息</span><strong>${state.posts.length}</strong></div>
+          <div class="stat"><span>普通用户</span><strong>${totalUsers}</strong></div>
+          <div class="stat"><span>启用账号</span><strong>${activeUsers}</strong></div>
+        </section>
+      `
+      : "";
 
     return `
-      <section class="section-title">
-        <div>
-          <h2>信息浏览</h2>
-          <p class="subtle">当前账号可浏览管理员发布的信息。</p>
-        </div>
-      </section>
-      <section class="stats-row" aria-label="数据概览">
-        <div class="stat"><span>已发布信息</span><strong>${state.posts.length}</strong></div>
-        <div class="stat"><span>普通用户</span><strong>${user.role === "admin" ? totalUsers : "-"}</strong></div>
-        <div class="stat"><span>启用账号</span><strong>${user.role === "admin" ? activeUsers : "-"}</strong></div>
-      </section>
-      <section class="split">
+      ${adminOverview}
+      <section class="split ${isAdmin ? "" : "user-info-only"}">
         <div class="tool-panel">
           <div class="info-toolbar">
             <h3>信息列表</h3>
