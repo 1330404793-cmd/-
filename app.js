@@ -350,6 +350,7 @@
         </span>
         <span class="info-meta">
           <span class="badge blue">${escapeHtml(post.category)}</span>
+          <span>发布人：${escapeHtml(post.authorName || "管理员")}</span>
           <span>${formatDate(post.createdAt)}</span>
         </span>
       </button>
@@ -367,6 +368,34 @@
       <h3 style="margin-top: 14px;">${escapeHtml(post.title)}</h3>
       <div class="detail-content">${escapeHtml(post.content)}</div>
     `;
+  }
+
+  function renderAudienceOptions() {
+    if (!state.users.length) {
+      return '<div class="empty compact">暂无普通用户可选择</div>';
+    }
+    return `
+      <div class="audience-grid">
+        ${state.users
+          .map(
+            (user) => `
+              <label class="check-row audience-option">
+                <input type="checkbox" name="visibleToUserIds" value="${escapeHtml(user.id)}" checked />
+                <span>
+                  <strong>${escapeHtml(user.name)}</strong>
+                  <small>${escapeHtml(user.username)}</small>
+                </span>
+              </label>
+            `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  function audienceLabel(post) {
+    if (!post.visibleUserNames || !post.visibleUserNames.length) return "普通用户不可见";
+    return post.visibleUserNames.join("、");
   }
 
   function renderPublishView() {
@@ -404,6 +433,11 @@
               <label for="post-content">内容</label>
               <textarea class="textarea" id="post-content" name="content" required></textarea>
             </div>
+            <div class="form-row">
+              <label>可见用户</label>
+              ${renderAudienceOptions()}
+              <span class="hint">只有勾选的普通用户可以看到这条信息；未勾选的人不可见。</span>
+            </div>
             <button class="btn btn-primary" type="submit">${icons.plus}<span>发布</span></button>
           </div>
         </form>
@@ -418,6 +452,8 @@
                 <tr>
                   <th>标题</th>
                   <th>分类</th>
+                  <th>发布人</th>
+                  <th>可见用户</th>
                   <th>发布时间</th>
                   <th>状态</th>
                   <th>操作</th>
@@ -432,6 +468,8 @@
                             <tr>
                               <td>${escapeHtml(post.title)}</td>
                               <td><span class="badge blue">${escapeHtml(post.category)}</span></td>
+                              <td>${escapeHtml(post.authorName || "管理员")}</td>
+                              <td>${escapeHtml(audienceLabel(post))}</td>
                               <td>${formatDate(post.createdAt)}</td>
                               <td>${post.pinned ? '<span class="badge soft">置顶</span>' : '<span class="badge">普通</span>'}</td>
                               <td>
@@ -444,7 +482,7 @@
                           `
                         )
                         .join("")
-                    : '<tr><td colspan="5">暂无发布信息</td></tr>'
+                    : '<tr><td colspan="7">暂无发布信息</td></tr>'
                 }
               </tbody>
             </table>
@@ -641,13 +679,15 @@
 
   async function createPost(form) {
     const formData = new FormData(form);
+    const visibleToUserIds = formData.getAll("visibleToUserIds").map((value) => String(value));
     await api("/api/posts", {
       method: "POST",
       body: JSON.stringify({
         title: String(formData.get("title") || "").trim(),
         category: String(formData.get("category") || "通知").trim(),
         content: String(formData.get("content") || "").trim(),
-        pinned: formData.get("pinned") === "on"
+        pinned: formData.get("pinned") === "on",
+        visibleToUserIds
       })
     });
     await loadPosts();

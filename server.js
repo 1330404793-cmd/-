@@ -80,7 +80,8 @@ function defaultData() {
           "本周六 22:00 至 23:00 将进行例行系统维护。维护期间可能出现短暂访问波动，请提前保存正在编辑的信息。",
         pinned: true,
         createdAt: "2026-05-28T08:30:00.000Z",
-        authorId: "admin-001"
+        authorId: "admin-001",
+        visibleToUserIds: ["user-001", "user-002"]
       },
       {
         id: "post-002",
@@ -90,7 +91,8 @@ function defaultData() {
           "从 6 月 1 日起，所有资料提交需要包含负责人、提交日期和版本号。管理员会在信息页同步最新模板。",
         pinned: false,
         createdAt: "2026-05-27T10:15:00.000Z",
-        authorId: "admin-001"
+        authorId: "admin-001",
+        visibleToUserIds: ["user-001", "user-002"]
       },
       {
         id: "post-003",
@@ -100,7 +102,8 @@ function defaultData() {
           "部门负责人提交账号申请后，管理员会在后台创建普通用户账号，并将初始密码单独发送给本人。",
         pinned: false,
         createdAt: "2026-05-25T02:00:00.000Z",
-        authorId: "admin-001"
+        authorId: "admin-001",
+        visibleToUserIds: ["user-001", "user-002"]
       }
     ]
   };
@@ -126,6 +129,21 @@ function normalizeData(data) {
   if (!normalized.users.some((user) => user.role === "admin")) {
     normalized.users.unshift(defaultData().users[0]);
   }
+
+  const regularUserIds = normalized.users
+    .filter((user) => user.role === "user")
+    .map((user) => user.id);
+  normalized.posts.forEach((post) => {
+    post.pinned = Boolean(post.pinned);
+    post.createdAt = post.createdAt || nowIso();
+    if (!Array.isArray(post.visibleToUserIds)) {
+      post.visibleToUserIds = [...regularUserIds];
+      return;
+    }
+    post.visibleToUserIds = post.visibleToUserIds.filter((userId, index, list) => {
+      return regularUserIds.includes(userId) && list.indexOf(userId) === index;
+    });
+  });
 
   return normalized;
 }
@@ -236,11 +254,37 @@ function sortedPosts(data) {
   });
 }
 
-function postsWithAuthor(data) {
-  return sortedPosts(data).map((post) => {
+function regularUsers(data) {
+  return data.users.filter((user) => user.role === "user");
+}
+
+function validVisibleUserIds(data, userIds) {
+  if (!Array.isArray(userIds)) return [];
+  const allowedUserIds = new Set(regularUsers(data).map((user) => user.id));
+  return userIds.filter((userId, index, list) => {
+    return allowedUserIds.has(userId) && list.indexOf(userId) === index;
+  });
+}
+
+function canUserSeePost(user, post) {
+  if (user.role === "admin") return true;
+  return Array.isArray(post.visibleToUserIds) && post.visibleToUserIds.includes(user.id);
+}
+
+function postsWithAuthor(data, currentUser) {
+  return sortedPosts(data).filter((post) => canUserSeePost(currentUser, post)).map((post) => {
     const author = data.users.find((user) => user.id === post.authorId);
+    const visibleUsers = regularUsers(data).filter((user) => post.visibleToUserIds.includes(user.id));
+    const adminFields =
+      currentUser.role === "admin"
+        ? {
+            visibleToUserIds: post.visibleToUserIds,
+            visibleUserNames: visibleUsers.map((user) => user.name)
+          }
+        : {};
     return {
       ...post,
+      ...adminFields,
       authorName: author ? author.name : "管理员"
     };
   });
@@ -289,7 +333,7 @@ async function handleApi(req, res, pathname) {
   if (req.method === "GET" && pathname === "/api/posts") {
     const user = requireUser(req, res, data);
     if (!user) return;
-    json(res, 200, { posts: postsWithAuthor(data) });
+    json(res, 200, { posts: postsWithAuthor(data, user) });
     return;
   }
 
@@ -300,6 +344,7 @@ async function handleApi(req, res, pathname) {
     const title = String(body.title || "").trim();
     const category = String(body.category || "通知").trim();
     const content = String(body.content || "").trim();
+    const visibleToUserIds = validVisibleUserIds(data, body.visibleToUserIds);
 
     if (!title || !content) {
       json(res, 400, { error: "标题和内容不能为空。" });
@@ -313,7 +358,8 @@ async function handleApi(req, res, pathname) {
       content,
       pinned: Boolean(body.pinned),
       createdAt: nowIso(),
-      authorId: user.id
+      authorId: user.id,
+      visibleToUserIds
     };
     data.posts.push(post);
     writeData(data);

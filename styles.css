@@ -590,6 +590,39 @@ button:disabled {
   padding: 22px;
 }
 
+.empty.compact {
+  min-height: 72px;
+}
+
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.audience-option {
+  align-items: flex-start;
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: #f9fbfb;
+}
+
+.audience-option span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.audience-option small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.8fr) minmax(460px, 1.2fr);
@@ -620,7 +653,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 700px;
+  min-width: 900px;
   border-collapse: collapse;
 }
 
@@ -750,6 +783,7 @@ tr:last-child td {
   }
 
   .stats-row,
+  .audience-grid,
   .two-col {
     grid-template-columns: 1fr;
   }
