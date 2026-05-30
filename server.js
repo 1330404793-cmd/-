@@ -271,6 +271,12 @@ function canUserSeePost(user, post) {
   return Array.isArray(post.visibleToUserIds) && post.visibleToUserIds.includes(user.id);
 }
 
+function authorDisplayName(author) {
+  if (!author) return "管理员";
+  if (author.name && author.name !== "系统管理员") return author.name;
+  return author.username || author.name || "管理员";
+}
+
 function postsWithAuthor(data, currentUser) {
   return sortedPosts(data).filter((post) => canUserSeePost(currentUser, post)).map((post) => {
     const author = data.users.find((user) => user.id === post.authorId);
@@ -285,7 +291,7 @@ function postsWithAuthor(data, currentUser) {
     return {
       ...post,
       ...adminFields,
-      authorName: author ? author.name : "管理员"
+      authorName: authorDisplayName(author)
     };
   });
 }
@@ -363,7 +369,7 @@ async function handleApi(req, res, pathname) {
     };
     data.posts.push(post);
     writeData(data);
-    json(res, 201, { post: { ...post, authorName: user.name } });
+    json(res, 201, { post: { ...post, authorName: authorDisplayName(user) } });
     return;
   }
 
@@ -378,7 +384,7 @@ async function handleApi(req, res, pathname) {
     }
     post.pinned = !post.pinned;
     writeData(data);
-    json(res, 200, { post: { ...post, authorName: user.name } });
+    json(res, 200, { post: { ...post, authorName: authorDisplayName(user) } });
     return;
   }
 
