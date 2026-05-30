@@ -72,4 +72,4 @@ data.json
 4. Render 会读取 `render.yaml`。
 5. 部署完成后访问 Render 生成的 `onrender.com` 地址。
 
-注意：这个项目使用 `data.json` 保存数据。Render 免费 Web Service 不支持持久化磁盘；如果希望用户和信息长期保存，需要选择支持 Disk 的付费实例。
+注意：当前 `render.yaml` 使用 Render 免费 Web Service，部署后可以获得公网地址。免费服务的文件系统不是长期持久化存储，如果希望用户和信息长期保存，需要后续改为 Render Disk 付费实例或数据库。
